@@ -131,16 +131,31 @@ class CPB_CPT_API_Sync {
                 }
 
                 $site_url = esc_url(site_url());
+            $plugin_url = plugin_dir_url(__FILE__);
+            $json_template_url = esc_url($plugin_url . 'templates/cpb-playwright-templates.json');
+            $js_helper_url = esc_url($plugin_url . 'templates/cpb-playwright-helper.js');
                 ?>
                 <div class="wrap">
                         <h1>CPB CPT API Sync Documentation</h1>
                         <p>This plugin exposes REST helpers for Colleges, Courses, Exams, and Streams. Use Application Passwords for auth.</p>
+                <p>
+                    <a class="button button-primary" href="<?php echo $json_template_url; ?>" download>Download JSON Templates</a>
+                    <a class="button" href="<?php echo $js_helper_url; ?>" download>Download Playwright Helper</a>
+                </p>
 
                         <h2>Authentication</h2>
                         <p><strong>Header:</strong> <code>Authorization: Basic base64(username:application_password)</code></p>
 
                         <h2>Export</h2>
                         <p><code>GET <?php echo $site_url; ?>/wp-json/cpb/v1/sync/export?types=college,course,exam,stream</code></p>
+                        <h3>Export Response</h3>
+                        <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
+    "types": ["college","course","exam","stream"],
+    "page": 1,
+    "per_page": 100,
+    "items": { "college": [], "course": [], "exam": [], "stream": [] },
+    "totals": { "college": 0, "course": 0, "exam": 0, "stream": 0 }
+}</pre>
 
                         <h2>Import (Upsert)</h2>
                         <p><code>POST <?php echo $site_url; ?>/wp-json/cpb/v1/sync/import</code></p>
@@ -167,6 +182,117 @@ class CPB_CPT_API_Sync {
                 ]
             },
             "relations_create_missing": true
+        }
+    ]
+}</pre>
+                        <h3>Import Response</h3>
+                        <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
+    "created": 0,
+    "updated": 0,
+    "deleted": 0,
+    "skipped": 0,
+    "errors": [],
+    "items": [
+        { "action": "created|updated|deleted", "post_type": "college|course|exam|stream", "slug": "...", "id": 123 }
+    ]
+}</pre>
+
+                        <h2>College Request Template</h2>
+                        <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
+    "items": [
+        {
+            "post_type": "college",
+            "slug": "abc-college",
+            "title": "ABC College",
+            "content": "&lt;p&gt;...&lt;/p&gt;",
+            "excerpt": "Short summary",
+            "status": "publish",
+            "featured_media_url": "https://example.com/wp-content/uploads/hero.jpg",
+            "media": {
+                "_college_logo": { "url": "https://example.com/wp-content/uploads/logo.png" },
+                "_college_gallery": [
+                    { "url": "https://example.com/wp-content/uploads/g1.jpg" },
+                    { "url": "https://example.com/wp-content/uploads/g2.jpg" }
+                ]
+            },
+            "meta": {
+                "_college_website_url": "https://abc.edu",
+                "_college_established_year": 1998,
+                "_college_fee_min": "100000",
+                "_college_fee_max": "250000",
+                "_college_location": "Mumbai",
+                "_college_pincode": "400001",
+                "_college_state": "Maharashtra",
+                "_college_country": "India",
+                "_college_address_line": "Street, Area"
+            },
+            "terms": {
+                "college_stream": ["engineering","medical"]
+            },
+            "relations": {
+                "linked_courses": [
+                    { "slug": "btech", "title": "B.Tech", "status": "publish" },
+                    { "slug": "mba", "title": "MBA", "status": "publish" }
+                ]
+            },
+            "relations_create_missing": true
+        }
+    ]
+}</pre>
+
+                        <h2>Course Request Template</h2>
+                        <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
+    "items": [
+        {
+            "post_type": "course",
+            "slug": "btech",
+            "title": "B.Tech",
+            "content": "&lt;p&gt;...&lt;/p&gt;",
+            "excerpt": "Short summary",
+            "status": "publish",
+            "meta": {},
+            "relations": {
+                "linked_colleges": [
+                    { "slug": "abc-college", "title": "ABC College", "status": "publish" }
+                ]
+            },
+            "relations_create_missing": true
+        }
+    ]
+}</pre>
+
+                        <h2>Exam Request Template</h2>
+                        <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
+    "items": [
+        {
+            "post_type": "exam",
+            "slug": "jee-main",
+            "title": "JEE Main",
+            "content": "&lt;p&gt;...&lt;/p&gt;",
+            "excerpt": "Short summary",
+            "status": "publish",
+            "meta": {},
+            "relations": {
+                "linked_streams": [
+                    { "slug": "engineering", "title": "Engineering", "status": "publish" }
+                ]
+            },
+            "relations_create_missing": true
+        }
+    ]
+}</pre>
+
+                        <h2>Stream Request Template</h2>
+                        <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
+    "items": [
+        {
+            "post_type": "stream",
+            "slug": "engineering",
+            "title": "Engineering",
+            "content": "&lt;p&gt;...&lt;/p&gt;",
+            "excerpt": "Short summary",
+            "status": "publish",
+            "meta": {}
         }
     ]
 }</pre>

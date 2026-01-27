@@ -1,0 +1,78 @@
+{
+  "college": {
+    "post_type": "college",
+    "slug": "abc-college",
+    "title": "ABC College",
+    "content": "<p>...</p>",
+    "excerpt": "Short summary",
+    "status": "publish",
+    "featured_media_url": "https://example.com/wp-content/uploads/hero.jpg",
+    "media": {
+      "_college_logo": { "url": "https://example.com/wp-content/uploads/logo.png" },
+      "_college_gallery": [
+        { "url": "https://example.com/wp-content/uploads/g1.jpg" },
+        { "url": "https://example.com/wp-content/uploads/g2.jpg" }
+      ]
+    },
+    "meta": {
+      "_college_website_url": "https://abc.edu",
+      "_college_established_year": 1998,
+      "_college_fee_min": "100000",
+      "_college_fee_max": "250000",
+      "_college_location": "Mumbai",
+      "_college_pincode": "400001",
+      "_college_state": "Maharashtra",
+      "_college_country": "India",
+      "_college_address_line": "Street, Area"
+    },
+    "terms": {
+      "college_stream": ["engineering", "medical"]
+    },
+    "relations": {
+      "linked_courses": [
+        { "slug": "btech", "title": "B.Tech", "status": "publish" },
+        { "slug": "mba", "title": "MBA", "status": "publish" }
+      ]
+    },
+    "relations_create_missing": true
+  },
+  "course": {
+    "post_type": "course",
+    "slug": "btech",
+    "title": "B.Tech",
+    "content": "<p>...</p>",
+    "excerpt": "Short summary",
+    "status": "publish",
+    "meta": {},
+    "relations": {
+      "linked_colleges": [
+        { "slug": "abc-college", "title": "ABC College", "status": "publish" }
+      ]
+    },
+    "relations_create_missing": true
+  },
+  "exam": {
+    "post_type": "exam",
+    "slug": "jee-main",
+    "title": "JEE Main",
+    "content": "<p>...</p>",
+    "excerpt": "Short summary",
+    "status": "publish",
+    "meta": {},
+    "relations": {
+      "linked_streams": [
+        { "slug": "engineering", "title": "Engineering", "status": "publish" }
+      ]
+    },
+    "relations_create_missing": true
+  },
+  "stream": {
+    "post_type": "stream",
+    "slug": "engineering",
+    "title": "Engineering",
+    "content": "<p>...</p>",
+    "excerpt": "Short summary",
+    "status": "publish",
+    "meta": {}
+  }
+}
