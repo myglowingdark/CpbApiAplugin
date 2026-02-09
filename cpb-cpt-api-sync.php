@@ -30,6 +30,27 @@ class CPB_CPT_API_Sync {
             '_college_state' => array('type' => 'string', 'single' => true),
             '_college_country' => array('type' => 'string', 'single' => true),
             '_college_address_line' => array('type' => 'string', 'single' => true),
+            '_college_fees_info' => array('type' => 'string', 'single' => true),
+            '_college_admission_info' => array('type' => 'string', 'single' => true),
+            '_college_placement_info' => array('type' => 'string', 'single' => true),
+            '_college_facility_description' => array('type' => 'string', 'single' => true),
+            '_college_facility_boys_hostel' => array('type' => 'string', 'single' => true),
+            '_college_facility_girls_hostel' => array('type' => 'string', 'single' => true),
+            '_college_facility_medical_hospital' => array('type' => 'string', 'single' => true),
+            '_college_facility_gym' => array('type' => 'string', 'single' => true),
+            '_college_facility_library' => array('type' => 'string', 'single' => true),
+            '_college_facility_sports' => array('type' => 'string', 'single' => true),
+            '_college_facility_it_infrastructure' => array('type' => 'string', 'single' => true),
+            '_college_facility_cafeteria' => array('type' => 'string', 'single' => true),
+            '_college_facility_auditorium' => array('type' => 'string', 'single' => true),
+            '_college_facility_transport_facility' => array('type' => 'string', 'single' => true),
+            '_college_facility_alumni_associations' => array('type' => 'string', 'single' => true),
+            '_college_facility_wifi' => array('type' => 'string', 'single' => true),
+            '_college_facility_laboratories' => array('type' => 'string', 'single' => true),
+            '_college_facility_guest_room' => array('type' => 'string', 'single' => true),
+            '_college_facility_training_placement_cell' => array('type' => 'string', 'single' => true),
+            '_college_is_university' => array('type' => 'string', 'single' => true),
+            '_college_university_departments' => array('type' => 'array', 'single' => true, 'items' => 'object'),
             '_linked_courses' => array('type' => 'array', 'single' => true, 'items' => 'integer'),
         ),
         'course' => array(
@@ -80,10 +101,21 @@ class CPB_CPT_API_Sync {
 
     private static function build_rest_schema($schema) {
         if ($schema['type'] === 'array') {
+            $items_type = isset($schema['items']) ? $schema['items'] : 'string';
+            
+            if ($items_type === 'object') {
+                return array(
+                    'type' => 'array',
+                    'items' => array(
+                        'type' => 'object',
+                    ),
+                );
+            }
+            
             return array(
                 'type' => 'array',
                 'items' => array(
-                    'type' => isset($schema['items']) ? $schema['items'] : 'string',
+                    'type' => $items_type,
                 ),
             );
         }
@@ -134,14 +166,23 @@ class CPB_CPT_API_Sync {
             $plugin_url = plugin_dir_url(__FILE__);
             $json_template_url = esc_url($plugin_url . 'templates/cpb-playwright-templates.json');
             $js_helper_url = esc_url($plugin_url . 'templates/cpb-playwright-helper.js');
+            $quickstart_url = esc_url($plugin_url . 'templates/PLAYWRIGHT-QUICK-START.md');
                 ?>
                 <div class="wrap">
                         <h1>CPB CPT API Sync Documentation</h1>
                         <p>This plugin exposes REST helpers for Colleges, Courses, Exams, and Streams. Use Application Passwords for auth.</p>
-                <p>
-                    <a class="button button-primary" href="<?php echo $json_template_url; ?>" download>Download JSON Templates</a>
-                    <a class="button" href="<?php echo $js_helper_url; ?>" download>Download Playwright Helper</a>
-                </p>
+                <div style="background: #e7f3ff; padding: 15px; border-left: 4px solid #2271b1; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">📥 Download Resources</h3>
+                    <p style="margin-bottom: 15px;">Get everything you need to start importing colleges with Playwright:</p>
+                    <p>
+                        <a class="button button-primary" href="<?php echo $json_template_url; ?>" download>📄 Download JSON Templates</a>
+                        <a class="button button-primary" href="<?php echo $js_helper_url; ?>" download>⚙️ Download Playwright Helper</a>
+                        <a class="button button-primary" href="<?php echo $quickstart_url; ?>" download>🚀 Download Quick Start Guide</a>
+                    </p>
+                    <p style="font-size: 13px; color: #646970; margin: 10px 0 0 0;">
+                        <strong>New!</strong> All college CPT fields now supported including facilities, admission info, placement info, and university departments.
+                    </p>
+                </div>
 
                         <h2>Authentication</h2>
                         <p><strong>Header:</strong> <code>Authorization: Basic base64(username:application_password)</code></p>
@@ -197,15 +238,15 @@ class CPB_CPT_API_Sync {
     ]
 }</pre>
 
-                        <h2>College Request Template</h2>
+                        <h2>College Request Template (Complete)</h2>
                         <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
     "items": [
         {
             "post_type": "college",
             "slug": "abc-college",
             "title": "ABC College",
-            "content": "&lt;p&gt;...&lt;/p&gt;",
-            "excerpt": "Short summary",
+            "content": "&lt;p&gt;Full college description...&lt;/p&gt;",
+            "excerpt": "Short summary of the college",
             "status": "publish",
             "featured_media_url": "https://example.com/wp-content/uploads/hero.jpg",
             "media": {
@@ -224,7 +265,31 @@ class CPB_CPT_API_Sync {
                 "_college_pincode": "400001",
                 "_college_state": "Maharashtra",
                 "_college_country": "India",
-                "_college_address_line": "Street, Area"
+                "_college_address_line": "123 Main Street, Andheri",
+                "_college_fees_info": "&lt;p&gt;Detailed fee structure...&lt;/p&gt;",
+                "_college_admission_info": "&lt;p&gt;Admission process details...&lt;/p&gt;",
+                "_college_placement_info": "&lt;p&gt;Placement statistics...&lt;/p&gt;",
+                "_college_facility_description": "&lt;p&gt;Overview of all facilities...&lt;/p&gt;",
+                "_college_facility_boys_hostel": "&lt;p&gt;Boys hostel details...&lt;/p&gt;",
+                "_college_facility_girls_hostel": "&lt;p&gt;Girls hostel details...&lt;/p&gt;",
+                "_college_facility_medical_hospital": "&lt;p&gt;Medical facility details...&lt;/p&gt;",
+                "_college_facility_gym": "&lt;p&gt;Gym facility details...&lt;/p&gt;",
+                "_college_facility_library": "&lt;p&gt;Library details...&lt;/p&gt;",
+                "_college_facility_sports": "&lt;p&gt;Sports facilities...&lt;/p&gt;",
+                "_college_facility_it_infrastructure": "&lt;p&gt;IT infrastructure...&lt;/p&gt;",
+                "_college_facility_cafeteria": "&lt;p&gt;Cafeteria details...&lt;/p&gt;",
+                "_college_facility_auditorium": "&lt;p&gt;Auditorium details...&lt;/p&gt;",
+                "_college_facility_transport_facility": "&lt;p&gt;Transport details...&lt;/p&gt;",
+                "_college_facility_alumni_associations": "&lt;p&gt;Alumni network...&lt;/p&gt;",
+                "_college_facility_wifi": "&lt;p&gt;WiFi availability...&lt;/p&gt;",
+                "_college_facility_laboratories": "&lt;p&gt;Lab facilities...&lt;/p&gt;",
+                "_college_facility_guest_room": "&lt;p&gt;Guest room details...&lt;/p&gt;",
+                "_college_facility_training_placement_cell": "&lt;p&gt;Training & placement...&lt;/p&gt;",
+                "_college_is_university": "1",
+                "_college_university_departments": [
+                    {"name": "College of Engineering", "ownership": "Private", "courses": 15},
+                    {"name": "College of Arts", "ownership": "Government", "courses": 8}
+                ]
             },
             "terms": {
                 "college_stream": ["engineering","medical"]
@@ -239,6 +304,93 @@ class CPB_CPT_API_Sync {
         }
     ]
 }</pre>
+                        <p><strong>Note:</strong> All facility fields are optional. Only include facilities that are available at the college. HTML content is supported in text fields.</p>
+
+                        <h2>College Request Template (Minimal - Required Fields Only)</h2>
+                        <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
+    "items": [
+        {
+            "post_type": "college",
+            "slug": "abc-college",
+            "title": "ABC College",
+            "content": "&lt;p&gt;Full description of the college...&lt;/p&gt;",
+            "status": "publish",
+            "meta": {
+                "_college_website_url": "https://abc.edu",
+                "_college_location": "Mumbai",
+                "_college_state": "Maharashtra",
+                "_college_country": "India"
+            }
+        }
+    ]
+}</pre>
+                        <p><strong>Minimal Template Usage:</strong> Use this template when you only have basic information. You can add more fields from the complete template as needed.</p>
+
+                        <h2>Available College Meta Fields Reference</h2>
+                        <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; margin-bottom:20px;">
+                            <h4 style="margin-top:0;">Basic Information</h4>
+                            <ul style="margin:5px 0; column-count:2; column-gap:20px;">
+                                <li><code>_college_website_url</code> (string)</li>
+                                <li><code>_college_established_year</code> (integer)</li>
+                            </ul>
+                            
+                            <h4>Location Details</h4>
+                            <ul style="margin:5px 0; column-count:2; column-gap:20px;">
+                                <li><code>_college_location</code> (string) - City/District</li>
+                                <li><code>_college_pincode</code> (string)</li>
+                                <li><code>_college_state</code> (string)</li>
+                                <li><code>_college_country</code> (string)</li>
+                                <li><code>_college_address_line</code> (string)</li>
+                            </ul>
+                            
+                            <h4>Fee Information</h4>
+                            <ul style="margin:5px 0;">
+                                <li><code>_college_fee_min</code> (string) - Minimum fee in ₹</li>
+                                <li><code>_college_fee_max</code> (string) - Maximum fee in ₹</li>
+                                <li><code>_college_fees_info</code> (HTML string) - Detailed fee structure</li>
+                            </ul>
+                            
+                            <h4>Additional Information (HTML Content)</h4>
+                            <ul style="margin:5px 0;">
+                                <li><code>_college_admission_info</code> (HTML string)</li>
+                                <li><code>_college_placement_info</code> (HTML string)</li>
+                            </ul>
+                            
+                            <h4>Facilities (All HTML Content)</h4>
+                            <ul style="margin:5px 0; column-count:2; column-gap:20px; font-size:12px;">
+                                <li><code>_college_facility_description</code></li>
+                                <li><code>_college_facility_boys_hostel</code></li>
+                                <li><code>_college_facility_girls_hostel</code></li>
+                                <li><code>_college_facility_medical_hospital</code></li>
+                                <li><code>_college_facility_gym</code></li>
+                                <li><code>_college_facility_library</code></li>
+                                <li><code>_college_facility_sports</code></li>
+                                <li><code>_college_facility_it_infrastructure</code></li>
+                                <li><code>_college_facility_cafeteria</code></li>
+                                <li><code>_college_facility_auditorium</code></li>
+                                <li><code>_college_facility_transport_facility</code></li>
+                                <li><code>_college_facility_alumni_associations</code></li>
+                                <li><code>_college_facility_wifi</code></li>
+                                <li><code>_college_facility_laboratories</code></li>
+                                <li><code>_college_facility_guest_room</code></li>
+                                <li><code>_college_facility_training_placement_cell</code></li>
+                            </ul>
+                            
+                            <h4>University Information</h4>
+                            <ul style="margin:5px 0;">
+                                <li><code>_college_is_university</code> (string: "1" or empty)</li>
+                                <li><code>_college_university_departments</code> (array of objects)
+                                    <br><small>Each object: {"name": "...", "ownership": "Private|Government|Semi Government", "courses": 0}</small>
+                                </li>
+                            </ul>
+                            
+                            <h4>Media</h4>
+                            <ul style="margin:5px 0;">
+                                <li><code>featured_media_url</code> - Main hero image</li>
+                                <li><code>media._college_logo</code> - College logo (in media object)</li>
+                                <li><code>media._college_gallery</code> - Array of gallery images (in media object)</li>
+                            </ul>
+                        </div>
 
                         <h2>Course Request Template</h2>
                         <pre style="white-space: pre-wrap; background:#fff; padding:12px; border:1px solid #ccd0d4;">{
@@ -602,7 +754,7 @@ class CPB_CPT_API_Sync {
 
     private static function apply_media($post_type, $post_id, $item) {
         $media = isset($item['media']) && is_array($item['media']) ? $item['media'] : array();
-
+        
         if (!empty($item['featured_media_url'])) {
             $featured_id = self::sideload_media($item['featured_media_url'], $post_id);
             if ($featured_id) {
@@ -878,20 +1030,47 @@ class CPB_CPT_API_Sync {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
-
+        
         $tmp = download_url($url);
+        
         if (is_wp_error($tmp)) {
+            error_log('[CPB Media] Download failed for ' . $url . ': ' . $tmp->get_error_message());
             return 0;
         }
 
+        // Detect the MIME type from the downloaded file
+        $file_type = wp_check_filetype_and_ext($tmp, basename($tmp));
+        
+        // Generate a proper filename with extension
+        $filename = basename(parse_url($url, PHP_URL_PATH));
+        if (empty($file_type['ext']) && !empty($file_type['type'])) {
+            // Get extension from MIME type
+            $mime_to_ext = array(
+                'image/jpeg' => 'jpg',
+                'image/jpg' => 'jpg',
+                'image/png' => 'png',
+                'image/gif' => 'gif',
+                'image/webp' => 'webp',
+            );
+            if (isset($mime_to_ext[$file_type['type']])) {
+                $filename = 'image-' . time() . '-' . rand(1000, 9999) . '.' . $mime_to_ext[$file_type['type']];
+            }
+        }
+        
+        // If still no extension, add .jpg as default for images
+        if (strpos($filename, '.') === false) {
+            $filename .= '.jpg';
+        }
+
         $file_array = array(
-            'name' => basename(parse_url($url, PHP_URL_PATH)),
+            'name' => $filename,
             'tmp_name' => $tmp,
         );
-
+        
         $attachment_id = media_handle_sideload($file_array, $post_id);
 
         if (is_wp_error($attachment_id)) {
+            error_log('[CPB Media] Sideload failed for ' . $url . ': ' . $attachment_id->get_error_message());
             @unlink($file_array['tmp_name']);
             return 0;
         }
@@ -1009,6 +1188,22 @@ class CPB_CPT_API_Sync {
                 return array();
             }
             $item_type = isset($schema['items']) ? $schema['items'] : 'string';
+            
+            if ($item_type === 'object') {
+                // For university departments array of objects
+                $sanitized = array();
+                foreach ($value as $item) {
+                    if (is_array($item)) {
+                        $sanitized[] = array(
+                            'name' => isset($item['name']) ? sanitize_text_field($item['name']) : '',
+                            'ownership' => isset($item['ownership']) ? sanitize_text_field($item['ownership']) : '',
+                            'courses' => isset($item['courses']) ? absint($item['courses']) : 0,
+                        );
+                    }
+                }
+                return $sanitized;
+            }
+            
             $sanitized = array();
             foreach ($value as $item) {
                 $sanitized[] = ($item_type === 'integer') ? absint($item) : sanitize_text_field($item);

@@ -1,78 +1,307 @@
 {
-  "college": {
-    "post_type": "college",
-    "slug": "abc-college",
-    "title": "ABC College",
-    "content": "<p>...</p>",
-    "excerpt": "Short summary",
-    "status": "publish",
-    "featured_media_url": "https://example.com/wp-content/uploads/hero.jpg",
+  "_readme": {
+    "title": "CPB College Import Templates",
+    "description": "Use these templates with the CPB CPT API Sync plugin to import colleges via Playwright",
+    "endpoint": "/wp-json/cpb/v1/sync/import",
+    "method": "POST",
+    "authentication": "Basic Auth with Application Password"
+  },
+  "college_minimal": {
+    "description": "Minimal college import with only required fields",
+    "example": {
+      "items": [
+        {
+          "post_type": "college",
+          "slug": "abc-college",
+          "title": "ABC College",
+          "content": "<p>Full description of the college...</p>",
+          "status": "publish",
+          "meta": {
+            "_college_website_url": "https://abc.edu",
+            "_college_location": "Mumbai",
+            "_college_state": "Maharashtra",
+            "_college_country": "India"
+          }
+        }
+      ]
+    }
+  },
+  "college_complete": {
+    "description": "Complete college import with all available fields",
+    "example": {
+      "items": [
+        {
+          "post_type": "college",
+          "slug": "abc-college",
+          "title": "ABC College",
+          "content": "<p>Full college description with history, vision, mission...</p>",
+          "excerpt": "A premier institution offering quality education since 1998",
+          "status": "publish",
+          "featured_media_url": "https://example.com/hero-image.jpg",
+          "media": {
+            "_college_logo": {
+              "url": "https://example.com/logo.png"
+            },
+            "_college_gallery": [
+              {
+                "url": "https://example.com/gallery-1.jpg"
+              },
+              {
+                "url": "https://example.com/gallery-2.jpg"
+              }
+            ]
+          },
+          "meta": {
+            "_college_website_url": "https://abc.edu",
+            "_college_established_year": 1998,
+            "_college_location": "Mumbai",
+            "_college_pincode": "400001",
+            "_college_state": "Maharashtra",
+            "_college_country": "India",
+            "_college_address_line": "123 Main Street, Andheri West",
+            "_college_fee_min": "100000",
+            "_college_fee_max": "250000",
+            "_college_fees_info": "<h3>Fee Structure</h3><ul><li>Tuition: ₹1,50,000 per year</li><li>Hostel: ₹50,000 per year</li></ul>",
+            "_college_admission_info": "<h3>Admission Process</h3><p>Applications open in May. Entrance exam in June...</p>",
+            "_college_placement_info": "<h3>Placement Statistics</h3><p>Average package: ₹6 LPA. Top recruiters include...</p>",
+            "_college_facility_description": "<p>Our campus is equipped with state-of-the-art facilities...</p>",
+            "_college_facility_boys_hostel": "<p>Separate boys hostel with 500 rooms...</p>",
+            "_college_facility_girls_hostel": "<p>Girls hostel with modern amenities...</p>",
+            "_college_facility_library": "<p>Central library with 50,000+ books...</p>",
+            "_college_facility_sports": "<p>Sports complex with cricket ground, basketball court...</p>",
+            "_college_facility_cafeteria": "<p>Multi-cuisine cafeteria serving hygienic food...</p>",
+            "_college_facility_laboratories": "<p>Well-equipped labs for all departments...</p>",
+            "_college_is_university": "1",
+            "_college_university_departments": [
+              {
+                "name": "College of Engineering",
+                "ownership": "Private",
+                "courses": 15
+              },
+              {
+                "name": "College of Arts & Science",
+                "ownership": "Government",
+                "courses": 8
+              }
+            ]
+          },
+          "terms": {
+            "college_stream": [
+              "engineering",
+              "medical",
+              "management"
+            ]
+          },
+          "relations": {
+            "linked_courses": [
+              {
+                "slug": "btech-computer-science",
+                "title": "B.Tech Computer Science",
+                "status": "publish"
+              },
+              {
+                "slug": "mba",
+                "title": "MBA",
+                "status": "publish"
+              }
+            ]
+          },
+          "relations_create_missing": true
+        }
+      ]
+    }
+  },
+  "college_with_facilities": {
+    "description": "College import focusing on facilities",
+    "example": {
+      "items": [
+        {
+          "post_type": "college",
+          "slug": "xyz-engineering-college",
+          "title": "XYZ Engineering College",
+          "content": "<p>Premier engineering college...</p>",
+          "status": "publish",
+          "meta": {
+            "_college_website_url": "https://xyzeng.edu",
+            "_college_location": "Pune",
+            "_college_state": "Maharashtra",
+            "_college_country": "India",
+            "_college_facility_description": "<p>Modern campus spread across 50 acres...</p>",
+            "_college_facility_boys_hostel": "<p>AC and non-AC accommodation available...</p>",
+            "_college_facility_girls_hostel": "<p>Secure hostel with 24/7 security...</p>",
+            "_college_facility_library": "<p>Digital library with e-resources...</p>",
+            "_college_facility_laboratories": "<p>Advanced computer labs, electronics labs...</p>",
+            "_college_facility_wifi": "<p>High-speed WiFi across campus...</p>",
+            "_college_facility_sports": "<p>Indoor and outdoor sports facilities...</p>",
+            "_college_facility_gym": "<p>Modern gymnasium with latest equipment...</p>",
+            "_college_facility_cafeteria": "<p>Food court with multiple outlets...</p>",
+            "_college_facility_medical_hospital": "<p>On-campus medical center...</p>",
+            "_college_facility_transport_facility": "<p>College buses covering major routes...</p>",
+            "_college_facility_auditorium": "<p>1000-seater auditorium with AV facilities...</p>",
+            "_college_facility_it_infrastructure": "<p>Campus-wide fiber optic network...</p>",
+            "_college_facility_training_placement_cell": "<p>Dedicated placement cell with 95% placement record...</p>"
+          }
+        }
+      ]
+    }
+  },
+  "college_university": {
+    "description": "University with multiple colleges/departments",
+    "example": {
+      "items": [
+        {
+          "post_type": "college",
+          "slug": "state-university",
+          "title": "State University",
+          "content": "<p>Leading state university with multiple affiliated colleges...</p>",
+          "status": "publish",
+          "meta": {
+            "_college_website_url": "https://stateuniv.edu.in",
+            "_college_established_year": 1985,
+            "_college_location": "Delhi",
+            "_college_state": "Delhi",
+            "_college_country": "India",
+            "_college_is_university": "1",
+            "_college_university_departments": [
+              {
+                "name": "Faculty of Engineering & Technology",
+                "ownership": "Government",
+                "courses": 25
+              },
+              {
+                "name": "Faculty of Arts",
+                "ownership": "Government",
+                "courses": 18
+              },
+              {
+                "name": "Faculty of Science",
+                "ownership": "Government",
+                "courses": 15
+              },
+              {
+                "name": "Faculty of Commerce",
+                "ownership": "Government",
+                "courses": 10
+              },
+              {
+                "name": "Faculty of Law",
+                "ownership": "Government",
+                "courses": 8
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "course_simple": {
+    "description": "Simple course import",
+    "example": {
+      "items": [
+        {
+          "post_type": "course",
+          "slug": "btech-computer-science",
+          "title": "B.Tech Computer Science",
+          "content": "<p>4-year undergraduate program in Computer Science...</p>",
+          "status": "publish",
+          "relations": {
+            "linked_colleges": [
+              {
+                "slug": "abc-college",
+                "title": "ABC College",
+                "status": "publish"
+              }
+            ]
+          },
+          "relations_create_missing": false
+        }
+      ]
+    }
+  },
+  "bulk_import": {
+    "description": "Import multiple colleges at once",
+    "example": {
+      "items": [
+        {
+          "post_type": "college",
+          "slug": "college-1",
+          "title": "College One",
+          "content": "<p>Description...</p>",
+          "status": "publish",
+          "meta": {
+            "_college_location": "City 1",
+            "_college_state": "State 1",
+            "_college_country": "India"
+          }
+        },
+        {
+          "post_type": "college",
+          "slug": "college-2",
+          "title": "College Two",
+          "content": "<p>Description...</p>",
+          "status": "publish",
+          "meta": {
+            "_college_location": "City 2",
+            "_college_state": "State 2",
+            "_college_country": "India"
+          }
+        }
+      ]
+    }
+  },
+  "field_reference": {
+    "basic_info": {
+      "_college_website_url": "string - Official website URL",
+      "_college_established_year": "integer - Year college was founded"
+    },
+    "location": {
+      "_college_location": "string - City/District name",
+      "_college_pincode": "string - Postal/ZIP code",
+      "_college_state": "string - State/Province",
+      "_college_country": "string - Country name",
+      "_college_address_line": "string - Street address, landmarks"
+    },
+    "fees": {
+      "_college_fee_min": "string - Minimum annual fee in rupees",
+      "_college_fee_max": "string - Maximum annual fee in rupees",
+      "_college_fees_info": "HTML string - Detailed fee structure"
+    },
+    "additional_info": {
+      "_college_admission_info": "HTML string - Admission process, eligibility, dates",
+      "_college_placement_info": "HTML string - Placement statistics, recruiters"
+    },
+    "facilities": {
+      "_college_facility_description": "HTML string - General facilities overview",
+      "_college_facility_boys_hostel": "HTML string",
+      "_college_facility_girls_hostel": "HTML string",
+      "_college_facility_medical_hospital": "HTML string",
+      "_college_facility_gym": "HTML string",
+      "_college_facility_library": "HTML string",
+      "_college_facility_sports": "HTML string",
+      "_college_facility_it_infrastructure": "HTML string",
+      "_college_facility_cafeteria": "HTML string",
+      "_college_facility_auditorium": "HTML string",
+      "_college_facility_transport_facility": "HTML string",
+      "_college_facility_alumni_associations": "HTML string",
+      "_college_facility_wifi": "HTML string",
+      "_college_facility_laboratories": "HTML string",
+      "_college_facility_guest_room": "HTML string",
+      "_college_facility_training_placement_cell": "HTML string"
+    },
+    "university": {
+      "_college_is_university": "string - '1' if university, empty otherwise",
+      "_college_university_departments": "array of objects - [{name, ownership, courses}]"
+    },
     "media": {
-      "_college_logo": { "url": "https://example.com/wp-content/uploads/logo.png" },
-      "_college_gallery": [
-        { "url": "https://example.com/wp-content/uploads/g1.jpg" },
-        { "url": "https://example.com/wp-content/uploads/g2.jpg" }
-      ]
-    },
-    "meta": {
-      "_college_website_url": "https://abc.edu",
-      "_college_established_year": 1998,
-      "_college_fee_min": "100000",
-      "_college_fee_max": "250000",
-      "_college_location": "Mumbai",
-      "_college_pincode": "400001",
-      "_college_state": "Maharashtra",
-      "_college_country": "India",
-      "_college_address_line": "Street, Area"
-    },
-    "terms": {
-      "college_stream": ["engineering", "medical"]
+      "featured_media_url": "string - Main hero/banner image URL",
+      "_college_logo": "object in media - {url: string} or {id: integer}",
+      "_college_gallery": "array in media - [{url: string}] or [{id: integer}]"
     },
     "relations": {
-      "linked_courses": [
-        { "slug": "btech", "title": "B.Tech", "status": "publish" },
-        { "slug": "mba", "title": "MBA", "status": "publish" }
-      ]
+      "linked_courses": "array - Course slugs or objects [{slug, title, status}]"
     },
-    "relations_create_missing": true
-  },
-  "course": {
-    "post_type": "course",
-    "slug": "btech",
-    "title": "B.Tech",
-    "content": "<p>...</p>",
-    "excerpt": "Short summary",
-    "status": "publish",
-    "meta": {},
-    "relations": {
-      "linked_colleges": [
-        { "slug": "abc-college", "title": "ABC College", "status": "publish" }
-      ]
-    },
-    "relations_create_missing": true
-  },
-  "exam": {
-    "post_type": "exam",
-    "slug": "jee-main",
-    "title": "JEE Main",
-    "content": "<p>...</p>",
-    "excerpt": "Short summary",
-    "status": "publish",
-    "meta": {},
-    "relations": {
-      "linked_streams": [
-        { "slug": "engineering", "title": "Engineering", "status": "publish" }
-      ]
-    },
-    "relations_create_missing": true
-  },
-  "stream": {
-    "post_type": "stream",
-    "slug": "engineering",
-    "title": "Engineering",
-    "content": "<p>...</p>",
-    "excerpt": "Short summary",
-    "status": "publish",
-    "meta": {}
+    "taxonomy": {
+      "college_stream": "array of strings - Stream tags like 'engineering', 'medical'"
+    }
   }
 }
