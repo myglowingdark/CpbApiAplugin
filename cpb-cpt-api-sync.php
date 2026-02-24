@@ -2,8 +2,9 @@
 /**
  * Plugin Name: CPB CPT API Sync
  * Description: REST helpers to manage Colleges, Courses, and Exams via API with meta + relationship sync.
- * Version: 1.0.0
- * Author: CPB
+ * Version: 1.1.0
+ * Author: Glowing Dark
+* Author URI: https://glowingdark.com
  */
 
 if (!defined('ABSPATH')) {
