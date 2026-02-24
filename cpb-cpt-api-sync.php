@@ -30,25 +30,25 @@ class CPB_CPT_API_Sync {
             '_college_state' => array('type' => 'string', 'single' => true),
             '_college_country' => array('type' => 'string', 'single' => true),
             '_college_address_line' => array('type' => 'string', 'single' => true),
-            '_college_fees_info' => array('type' => 'string', 'single' => true),
-            '_college_admission_info' => array('type' => 'string', 'single' => true),
-            '_college_placement_info' => array('type' => 'string', 'single' => true),
-            '_college_facility_description' => array('type' => 'string', 'single' => true),
-            '_college_facility_boys_hostel' => array('type' => 'string', 'single' => true),
-            '_college_facility_girls_hostel' => array('type' => 'string', 'single' => true),
-            '_college_facility_medical_hospital' => array('type' => 'string', 'single' => true),
-            '_college_facility_gym' => array('type' => 'string', 'single' => true),
-            '_college_facility_library' => array('type' => 'string', 'single' => true),
-            '_college_facility_sports' => array('type' => 'string', 'single' => true),
-            '_college_facility_it_infrastructure' => array('type' => 'string', 'single' => true),
-            '_college_facility_cafeteria' => array('type' => 'string', 'single' => true),
-            '_college_facility_auditorium' => array('type' => 'string', 'single' => true),
-            '_college_facility_transport_facility' => array('type' => 'string', 'single' => true),
-            '_college_facility_alumni_associations' => array('type' => 'string', 'single' => true),
-            '_college_facility_wifi' => array('type' => 'string', 'single' => true),
-            '_college_facility_laboratories' => array('type' => 'string', 'single' => true),
-            '_college_facility_guest_room' => array('type' => 'string', 'single' => true),
-            '_college_facility_training_placement_cell' => array('type' => 'string', 'single' => true),
+            '_college_fees_info' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_admission_info' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_placement_info' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_description' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_boys_hostel' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_girls_hostel' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_medical_hospital' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_gym' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_library' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_sports' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_it_infrastructure' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_cafeteria' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_auditorium' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_transport_facility' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_alumni_associations' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_wifi' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_laboratories' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_guest_room' => array('type' => 'string', 'html' => true, 'single' => true),
+            '_college_facility_training_placement_cell' => array('type' => 'string', 'html' => true, 'single' => true),
             '_college_is_university' => array('type' => 'string', 'single' => true),
             '_college_university_departments' => array('type' => 'array', 'single' => true, 'items' => 'object'),
             '_linked_courses' => array('type' => 'array', 'single' => true, 'items' => 'integer'),
@@ -1209,6 +1209,11 @@ class CPB_CPT_API_Sync {
                 $sanitized[] = ($item_type === 'integer') ? absint($item) : sanitize_text_field($item);
             }
             return array_values(array_unique($sanitized));
+        }
+
+        // Use wp_kses_post for HTML-enabled fields to preserve formatting
+        if (!empty($schema['html'])) {
+            return wp_kses_post($value);
         }
 
         return sanitize_text_field($value);
