@@ -144,6 +144,13 @@ class CPB_CPT_API_Sync {
             'callback' => array(__CLASS__, 'handle_import'),
             'permission_callback' => array(__CLASS__, 'can_manage'),
         ));
+
+        // Public endpoint — college interest / enquiry form submission (no auth required)
+        register_rest_route('cpb/v1', '/college-interest', array(
+            'methods'             => 'POST',
+            'callback'            => array(__CLASS__, 'handle_college_interest'),
+            'permission_callback' => '__return_true',
+        ));
     }
 
         public static function register_docs_page() {
@@ -469,6 +476,59 @@ class CPB_CPT_API_Sync {
 
     public static function can_manage() {
         return current_user_can('edit_posts');
+    }
+
+    /**
+     * Handle public college-interest form submission.
+     * Mirrors cpbtheme_submit_college_interest() in the theme but works over REST
+     * (no nonce required — relies on rate-limiting / honeypot on the client side).
+     */
+    public static function handle_college_interest( WP_REST_Request $request ) {
+        $name          = sanitize_text_field( $request->get_param('name') ?? '' );
+        $email         = sanitize_email( $request->get_param('email') ?? '' );
+        $phone         = sanitize_text_field( $request->get_param('phone') ?? '' );
+        $college       = sanitize_text_field( $request->get_param('college') ?? '' );
+        $department    = sanitize_text_field( $request->get_param('department') ?? 'General Admission' );
+        $qualification = sanitize_text_field( $request->get_param('qualification') ?? '' );
+        $message       = sanitize_textarea_field( $request->get_param('message') ?? '' );
+
+        if ( empty($name) || empty($email) || empty($phone) ) {
+            return new WP_Error( 'missing_fields', 'Name, email and phone are required.', array('status' => 400) );
+        }
+        if ( ! is_email($email) ) {
+            return new WP_Error( 'invalid_email', 'Invalid email address.', array('status' => 400) );
+        }
+
+        // Fire the same hook the theme AJAX handler uses so existing DB/sheet integrations still work
+        do_action( 'cpbtheme_college_interest_submitted', array(
+            'name'          => $name,
+            'email'         => $email,
+            'phone'         => $phone,
+            'college'       => $college,
+            'department'    => $department,
+            'qualification' => $qualification,
+            'message'       => $message,
+            'email_sent'    => false, // email sent below
+        ) );
+
+        // Send admin notification email
+        $to      = get_option('admin_email');
+        $subject = 'New College Interest: ' . $department . ' — ' . $college;
+        $body    = "New interest submission (via REST endpoint):\n\n"
+                 . "College: {$college}\nDepartment: {$department}\n\n"
+                 . "Name: {$name}\nEmail: {$email}\nPhone: {$phone}\n"
+                 . ( $qualification ? "Qualification: {$qualification}\n" : '' )
+                 . ( $message       ? "\nMessage:\n{$message}\n" : '' )
+                 . "\nIP: " . ( $_SERVER['REMOTE_ADDR'] ?? 'unknown' );
+
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <noreply@' . parse_url( get_site_url(), PHP_URL_HOST ) . '>',
+            'Reply-To: ' . $name . ' <' . $email . '>',
+        );
+        wp_mail( $to, $subject, $body, $headers );
+
+        return rest_ensure_response( array( 'success' => true, 'message' => 'Thank you! Your enquiry has been submitted.' ) );
     }
 
     private static function get_allowed_types_from_request($request) {
