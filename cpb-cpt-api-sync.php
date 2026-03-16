@@ -11,6 +11,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load secondary database manager
+require_once plugin_dir_path(__FILE__) . 'includes/class-secondary-db-manager.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-secondary-db-settings.php';
+
 class CPB_CPT_API_Sync {
     const ALLOWED_TYPES = array('college', 'course', 'exam', 'stream');
 
@@ -155,12 +159,24 @@ class CPB_CPT_API_Sync {
     }
 
         public static function register_docs_page() {
-                add_submenu_page(
-                        'tools.php',
-                        'CPB CPT API Sync Docs',
-                        'CPB CPT API Sync',
+                // Add main menu page
+                add_menu_page(
+                        'CPB API Sync',
+                        'CPB API Sync',
                         'manage_options',
-                        'cpb-cpt-api-sync-docs',
+                        'cpb-cpt-api-sync',
+                        array(__CLASS__, 'render_docs_page'),
+                        'dashicons-database-export',
+                        25
+                );
+                
+                // Add submenu (same slug for main page)
+                add_submenu_page(
+                        'cpb-cpt-api-sync',
+                        'API Documentation',
+                        'API Docs',
+                        'manage_options',
+                        'cpb-cpt-api-sync',
                         array(__CLASS__, 'render_docs_page')
                 );
         }
