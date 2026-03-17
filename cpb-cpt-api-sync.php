@@ -11,9 +11,38 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Load secondary database manager
-require_once plugin_dir_path(__FILE__) . 'includes/class-secondary-db-manager.php';
-require_once plugin_dir_path(__FILE__) . 'includes/class-secondary-db-settings.php';
+/**
+ * Activation hook — verify minimum requirements before allowing activation.
+ */
+register_activation_hook(__FILE__, 'cpb_cpt_api_sync_activate');
+function cpb_cpt_api_sync_activate() {
+    if (version_compare(PHP_VERSION, '7.4', '<')) {
+        deactivate_plugins(plugin_basename(__FILE__));
+        wp_die(
+            'CPB CPT API Sync requires PHP 7.4 or higher. Your server is running PHP ' . PHP_VERSION . '.',
+            'Plugin Activation Error',
+            array('back_link' => true)
+        );
+    }
+
+    if (!extension_loaded('mysqli')) {
+        deactivate_plugins(plugin_basename(__FILE__));
+        wp_die(
+            'CPB CPT API Sync requires the <strong>mysqli</strong> PHP extension, which is not enabled on this server. ' .
+            'Please enable it in your hosting control panel (PHP Extensions section) before activating this plugin.',
+            'Plugin Activation Error',
+            array('back_link' => true)
+        );
+    }
+}
+
+// Load secondary database manager (guarded — must never fatally crash the plugin)
+if (file_exists(plugin_dir_path(__FILE__) . 'includes/class-secondary-db-manager.php')) {
+    require_once plugin_dir_path(__FILE__) . 'includes/class-secondary-db-manager.php';
+}
+if (file_exists(plugin_dir_path(__FILE__) . 'includes/class-secondary-db-settings.php')) {
+    require_once plugin_dir_path(__FILE__) . 'includes/class-secondary-db-settings.php';
+}
 
 class CPB_CPT_API_Sync {
     const ALLOWED_TYPES = array('college', 'course', 'exam', 'stream');
@@ -757,7 +786,7 @@ class CPB_CPT_API_Sync {
             return new WP_Error('cpb_missing_slug', 'Item is missing a slug or title.');
         }
 
-        $existing = get_page_by_path($slug, OBJECT, $post_type);
+        $existing = self::find_post_by_slug($slug, $post_type);
         $action = $existing ? 'updated' : 'created';
         $post_id = $existing ? $existing->ID : 0;
 
@@ -805,6 +834,44 @@ class CPB_CPT_API_Sync {
             'slug' => $slug,
             'id' => $post_id,
         );
+    }
+
+    private static function with_post_type_storage($post_type, callable $callback) {
+        if (!in_array($post_type, array('college', 'course'), true) || !class_exists('CPB_Secondary_DB_Manager')) {
+            return $callback();
+        }
+
+        $db_manager = CPB_Secondary_DB_Manager::get_instance();
+        if (!$db_manager->is_enabled() || !$db_manager->is_connected()) {
+            return $callback();
+        }
+
+        global $wpdb;
+
+        $secondary_db = $db_manager->get_secondary_db();
+        if ($secondary_db && $wpdb === $secondary_db) {
+            return $callback();
+        }
+
+        $switched = false;
+        if (!isset($GLOBALS['cpb_original_wpdb'])) {
+            $db_manager->switch_to_secondary_db();
+            $switched = true;
+        }
+
+        try {
+            return $callback();
+        } finally {
+            if ($switched) {
+                $db_manager->restore_to_primary_db();
+            }
+        }
+    }
+
+    private static function find_post_by_slug($slug, $post_type) {
+        return self::with_post_type_storage($post_type, function() use ($slug, $post_type) {
+            return get_page_by_path($slug, OBJECT, $post_type);
+        });
     }
 
     private static function apply_meta($post_type, $post_id, $meta) {
@@ -973,7 +1040,7 @@ class CPB_CPT_API_Sync {
                 continue;
             }
 
-            $post = get_page_by_path($slug, OBJECT, $post_type);
+            $post = self::find_post_by_slug($slug, $post_type);
             if ($post) {
                 $ids[] = (int) $post->ID;
                 continue;
@@ -1002,6 +1069,39 @@ class CPB_CPT_API_Sync {
     }
 
     private static function detach_relationships_on_delete($post_id, $post_type) {
+        if (in_array($post_type, array('college', 'course'), true)) {
+            self::with_post_type_storage($post_type, function() use ($post_id, $post_type) {
+                self::detach_relationships_on_delete($post_id, $post_type === 'college' ? 'college_internal' : 'course_internal');
+            });
+            return;
+        }
+
+        if ($post_type === 'college_internal') {
+            $linked_courses = get_post_meta($post_id, '_linked_courses', true);
+            $linked_courses = is_array($linked_courses) ? $linked_courses : array();
+            foreach ($linked_courses as $course_id) {
+                $course_colleges = get_post_meta($course_id, '_linked_colleges', true);
+                $course_colleges = is_array($course_colleges) ? $course_colleges : array();
+                $course_colleges = array_values(array_diff($course_colleges, array($post_id)));
+                update_post_meta($course_id, '_linked_colleges', $course_colleges);
+            }
+            delete_post_meta($post_id, '_linked_courses');
+            return;
+        }
+
+        if ($post_type === 'course_internal') {
+            $linked_colleges = get_post_meta($post_id, '_linked_colleges', true);
+            $linked_colleges = is_array($linked_colleges) ? $linked_colleges : array();
+            foreach ($linked_colleges as $college_id) {
+                $college_courses = get_post_meta($college_id, '_linked_courses', true);
+                $college_courses = is_array($college_courses) ? $college_courses : array();
+                $college_courses = array_values(array_diff($college_courses, array($post_id)));
+                update_post_meta($college_id, '_linked_courses', $college_courses);
+            }
+            delete_post_meta($post_id, '_linked_colleges');
+            return;
+        }
+
         if ($post_type === 'college') {
             $linked_courses = get_post_meta($post_id, '_linked_courses', true);
             $linked_courses = is_array($linked_courses) ? $linked_courses : array();
@@ -1166,7 +1266,7 @@ class CPB_CPT_API_Sync {
             if (!$slug) {
                 continue;
             }
-            $post = get_page_by_path($slug, OBJECT, $post_type);
+            $post = self::find_post_by_slug($slug, $post_type);
             if ($post) {
                 $ids[] = (int) $post->ID;
             }
@@ -1176,55 +1276,59 @@ class CPB_CPT_API_Sync {
     }
 
     private static function sync_college_courses($college_id, $course_ids) {
-        $current = get_post_meta($college_id, '_linked_courses', true);
-        $current = is_array($current) ? $current : array();
-        $course_ids = array_values(array_unique(array_map('intval', $course_ids)));
+        self::with_post_type_storage('college', function() use ($college_id, $course_ids) {
+            $current = get_post_meta($college_id, '_linked_courses', true);
+            $current = is_array($current) ? $current : array();
+            $course_ids = array_values(array_unique(array_map('intval', $course_ids)));
 
-        update_post_meta($college_id, '_linked_courses', $course_ids);
+            update_post_meta($college_id, '_linked_courses', $course_ids);
 
-        $removed = array_diff($current, $course_ids);
-        foreach ($removed as $course_id) {
-            $linked = get_post_meta($course_id, '_linked_colleges', true);
-            $linked = is_array($linked) ? $linked : array();
-            $linked = array_values(array_diff($linked, array($college_id)));
-            update_post_meta($course_id, '_linked_colleges', $linked);
-        }
-
-        $added = array_diff($course_ids, $current);
-        foreach ($added as $course_id) {
-            $linked = get_post_meta($course_id, '_linked_colleges', true);
-            $linked = is_array($linked) ? $linked : array();
-            if (!in_array($college_id, $linked, true)) {
-                $linked[] = $college_id;
+            $removed = array_diff($current, $course_ids);
+            foreach ($removed as $course_id) {
+                $linked = get_post_meta($course_id, '_linked_colleges', true);
+                $linked = is_array($linked) ? $linked : array();
+                $linked = array_values(array_diff($linked, array($college_id)));
                 update_post_meta($course_id, '_linked_colleges', $linked);
             }
-        }
+
+            $added = array_diff($course_ids, $current);
+            foreach ($added as $course_id) {
+                $linked = get_post_meta($course_id, '_linked_colleges', true);
+                $linked = is_array($linked) ? $linked : array();
+                if (!in_array($college_id, $linked, true)) {
+                    $linked[] = $college_id;
+                    update_post_meta($course_id, '_linked_colleges', $linked);
+                }
+            }
+        });
     }
 
     private static function sync_course_colleges($course_id, $college_ids) {
-        $current = get_post_meta($course_id, '_linked_colleges', true);
-        $current = is_array($current) ? $current : array();
-        $college_ids = array_values(array_unique(array_map('intval', $college_ids)));
+        self::with_post_type_storage('course', function() use ($course_id, $college_ids) {
+            $current = get_post_meta($course_id, '_linked_colleges', true);
+            $current = is_array($current) ? $current : array();
+            $college_ids = array_values(array_unique(array_map('intval', $college_ids)));
 
-        update_post_meta($course_id, '_linked_colleges', $college_ids);
+            update_post_meta($course_id, '_linked_colleges', $college_ids);
 
-        $removed = array_diff($current, $college_ids);
-        foreach ($removed as $college_id) {
-            $linked = get_post_meta($college_id, '_linked_courses', true);
-            $linked = is_array($linked) ? $linked : array();
-            $linked = array_values(array_diff($linked, array($course_id)));
-            update_post_meta($college_id, '_linked_courses', $linked);
-        }
-
-        $added = array_diff($college_ids, $current);
-        foreach ($added as $college_id) {
-            $linked = get_post_meta($college_id, '_linked_courses', true);
-            $linked = is_array($linked) ? $linked : array();
-            if (!in_array($course_id, $linked, true)) {
-                $linked[] = $course_id;
+            $removed = array_diff($current, $college_ids);
+            foreach ($removed as $college_id) {
+                $linked = get_post_meta($college_id, '_linked_courses', true);
+                $linked = is_array($linked) ? $linked : array();
+                $linked = array_values(array_diff($linked, array($course_id)));
                 update_post_meta($college_id, '_linked_courses', $linked);
             }
-        }
+
+            $added = array_diff($college_ids, $current);
+            foreach ($added as $college_id) {
+                $linked = get_post_meta($college_id, '_linked_courses', true);
+                $linked = is_array($linked) ? $linked : array();
+                if (!in_array($course_id, $linked, true)) {
+                    $linked[] = $course_id;
+                    update_post_meta($college_id, '_linked_courses', $linked);
+                }
+            }
+        });
     }
 
     private static function sync_exam_streams($exam_id, $stream_ids) {

@@ -48,6 +48,11 @@ class CPB_Secondary_DB_Manager {
         
         // Hook into pre_get_posts to handle admin queries and counts
         add_action('pre_get_posts', array($this, 'switch_db_for_query'), 1);
+
+        // Keep frontend college/course rendering on the secondary database so
+        // templates, post meta, thumbnails, and related queries read a
+        // consistent dataset.
+        add_action('wp', array($this, 'lock_secondary_db_for_frontend'), 1);
         
         // Handle post count queries for admin screens
         add_filter('wp_count_posts', array($this, 'override_post_counts'), 10, 3);
@@ -128,7 +133,12 @@ class CPB_Secondary_DB_Manager {
                 $creds['host']
             );
             
-            $this->secondary_db->set_charset($this->secondary_db->dbh, $creds['charset'], $creds['collate']);
+            // Only call set_charset if the connection actually succeeded.
+            // On PHP 8+, passing a null $dbh to set_charset() throws a TypeError
+            // which crashes the page silently (TypeError extends Error, not Exception).
+            if (!empty($this->secondary_db->dbh)) {
+                $this->secondary_db->set_charset($this->secondary_db->dbh, $creds['charset'], $creds['collate']);
+            }
             
             // Set table prefix (same as primary for consistency)
             $this->secondary_db->set_prefix($GLOBALS['wpdb']->prefix);
@@ -141,9 +151,16 @@ class CPB_Secondary_DB_Manager {
                 
                 // Ensure tables exist in secondary database
                 $this->ensure_tables_exist();
+            } else {
+                // Log the actual MySQL error to help diagnose connection issues
+                $db_error = !empty($this->secondary_db->last_error) ? $this->secondary_db->last_error : 'Unknown connection error';
+                error_log('CPB Secondary DB Connection Error: ' . $db_error);
+                $GLOBALS['cpb_secondary_db_error'] = $db_error;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            // Catches both Exception and Error (TypeError, etc.) — PHP 8 compatible
             error_log('CPB Secondary DB Connection Error: ' . $e->getMessage());
+            $GLOBALS['cpb_secondary_db_error'] = $e->getMessage();
             $this->is_connected = false;
         }
     }
@@ -241,6 +258,10 @@ class CPB_Secondary_DB_Manager {
             if ($found_secondary) {
                 $this->switch_to_secondary_db();
                 $GLOBALS['cpb_admin_action_lock'] = true;
+                // Track how many secondary posts remain so restore_db_after_operation
+                // waits until ALL posts in the bulk action are processed before
+                // restoring primary DB instead of doing so after each individual post.
+                $GLOBALS['cpb_bulk_remaining'] = count(array_filter($post_ids));
                 add_action('shutdown', array($this, 'restore_to_primary_db'), 1);
             }
         }
@@ -333,6 +354,10 @@ class CPB_Secondary_DB_Manager {
         // Check if this is a college or course query
         if ($this->is_cpt_query($query)) {
             global $wpdb;
+
+            if (!is_admin() && method_exists($query, 'is_main_query') && $query->is_main_query()) {
+                $GLOBALS['cpb_frontend_render_lock'] = true;
+            }
             
             // Backup primary database connection
             $query->cpb_primary_db = $wpdb;
@@ -350,6 +375,10 @@ class CPB_Secondary_DB_Manager {
     public function restore_primary_db($posts, $query) {
         // Restore primary database if we switched
         if (isset($query->cpb_primary_db)) {
+            if (!empty($GLOBALS['cpb_frontend_render_lock']) && !is_admin() && method_exists($query, 'is_main_query') && $query->is_main_query()) {
+                return $posts;
+            }
+
             global $wpdb;
             $wpdb = $query->cpb_primary_db;
             unset($query->cpb_primary_db);
@@ -512,7 +541,12 @@ class CPB_Secondary_DB_Manager {
      * Restore database after save operations
      */
     public function restore_db_after_save($post_id, $post, $update) {
-        // Always restore after save
+        // Keep the secondary DB active for the full admin save request so
+        // late-running meta box handlers also write to the secondary tables.
+        if (isset($GLOBALS['cpb_admin_action_lock']) || isset($GLOBALS['cpb_frontend_render_lock'])) {
+            return;
+        }
+
         $this->restore_to_primary_db();
     }
     
@@ -659,16 +693,42 @@ class CPB_Secondary_DB_Manager {
      */
     public function maybe_restore_after_query($posts, $query = null) {
         // Don't restore if DB is locked for an admin action
-        if (!isset($GLOBALS['cpb_admin_action_lock'])) {
+        if (!isset($GLOBALS['cpb_admin_action_lock']) && !isset($GLOBALS['cpb_frontend_render_lock'])) {
             $this->restore_to_primary_db();
         }
         return $posts;
+    }
+
+    /**
+     * Keep the frontend request on secondary DB for college/course views.
+     */
+    public function lock_secondary_db_for_frontend() {
+        if (!$this->is_connected || !$this->is_enabled() || is_admin()) {
+            return;
+        }
+
+        if (is_singular($this->post_types) || is_post_type_archive($this->post_types)) {
+            $this->switch_to_secondary_db();
+            $GLOBALS['cpb_frontend_render_lock'] = true;
+            add_action('shutdown', array($this, 'restore_to_primary_db'), 1);
+        }
     }
     
     /**
      * Restore database after operations (trash/delete/untrash complete)
      */
     public function restore_db_after_operation($post_id_or_posts = null, $post_or_query = null) {
+        // In bulk operations, decrement the remaining counter and only restore
+        // after ALL posts in the batch have been processed.
+        if (isset($GLOBALS['cpb_bulk_remaining'])) {
+            $GLOBALS['cpb_bulk_remaining']--;
+            if ($GLOBALS['cpb_bulk_remaining'] > 0) {
+                // More posts still to process – keep DB switched and lock active.
+                return $post_id_or_posts;
+            }
+            unset($GLOBALS['cpb_bulk_remaining']);
+        }
+
         // Clear admin action lock when the operation is done
         unset($GLOBALS['cpb_admin_action_lock']);
         $this->restore_to_primary_db();
@@ -703,6 +763,8 @@ class CPB_Secondary_DB_Manager {
             $wpdb = $GLOBALS['cpb_original_wpdb'];
             unset($GLOBALS['cpb_original_wpdb']);
         }
+
+        unset($GLOBALS['cpb_frontend_render_lock']);
     }
     
     /**
@@ -722,9 +784,10 @@ class CPB_Secondary_DB_Manager {
         }
         
         if (!$this->is_connected) {
+            $extra = !empty($GLOBALS['cpb_secondary_db_error']) ? ' <em>(' . esc_html($GLOBALS['cpb_secondary_db_error']) . ')</em>' : '';
             echo '<div class="notice notice-error"><p>';
             echo '<strong>Secondary Database Connection Failed:</strong> ';
-            echo 'Unable to connect to the secondary database. College and Course data will use the primary database.';
+            echo 'Unable to connect to the secondary database. College and Course data will use the primary database.' . $extra;
             echo '</p></div>';
         } else {
             if (in_array($screen->post_type, $this->post_types)) {
@@ -748,11 +811,21 @@ class CPB_Secondary_DB_Manager {
                 $credentials['host']
             );
             
+            // Guard against PHP 8 TypeError when dbh is null (failed connection)
+            if (!empty($test_db->dbh)) {
+                $test_db->set_charset($test_db->dbh, 'utf8mb4', '');
+            }
+            
             $result = $test_db->query("SELECT 1");
             
-            return $result !== false;
-        } catch (Exception $e) {
-            return false;
+            if ($result === false) {
+                $error = !empty($test_db->last_error) ? $test_db->last_error : 'Could not connect to database';
+                return array('success' => false, 'error' => $error);
+            }
+            return array('success' => true, 'error' => '');
+        } catch (\Throwable $e) {
+            // Catches both Exception and Error (TypeError, etc.) — PHP 8 compatible
+            return array('success' => false, 'error' => $e->getMessage());
         }
     }
     
@@ -1112,8 +1185,10 @@ class CPB_Secondary_DB_Manager {
     }
 }
 
-// Initialize the manager
-function cpb_init_secondary_db_manager() {
-    return CPB_Secondary_DB_Manager::get_instance();
+// Initialize the manager — only when mysqli is available (safe for PHP 8.3+)
+if (extension_loaded('mysqli') && !function_exists('cpb_init_secondary_db_manager')) {
+    function cpb_init_secondary_db_manager() {
+        return CPB_Secondary_DB_Manager::get_instance();
+    }
+    add_action('plugins_loaded', 'cpb_init_secondary_db_manager');
 }
-add_action('plugins_loaded', 'cpb_init_secondary_db_manager');

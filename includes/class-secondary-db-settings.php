@@ -424,7 +424,7 @@ class CPB_Secondary_DB_Settings {
         $db_manager = CPB_Secondary_DB_Manager::get_instance();
         $result = $db_manager->test_connection($credentials);
         
-        if ($result) {
+        if (!empty($result['success'])) {
             add_settings_error(
                 'cpb_secondary_db_settings',
                 'connection_success',
@@ -432,10 +432,11 @@ class CPB_Secondary_DB_Settings {
                 'success'
             );
         } else {
+            $error_detail = !empty($result['error']) ? ' Error: ' . $result['error'] : '';
             add_settings_error(
                 'cpb_secondary_db_settings',
                 'connection_failed',
-                'Connection test failed! Please check your credentials and ensure the database exists.',
+                'Connection test failed! Please check your credentials and ensure the database exists.' . $error_detail,
                 'error'
             );
         }
